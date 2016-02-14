@@ -25,6 +25,12 @@ DEFAULT_CONFIG_DIR=os.path.join(XDG_CONFIG_DIR, 'gruf')
 DEFAULT_TEMPLATE = '''{{number}} {{owner.username}} {{subject}}
 '''
 
+QUERYMAP = {
+        'mine': 'owner:self',
+        'open': 'status:open',
+        'here': 'project:{project}',
+        }
+
 RAW_COMMANDS = [
     'review', 'ban-commit', 'create-branch',
     'ls-groups', 'ls-members', 'ls-projects',
@@ -67,10 +73,11 @@ def handle_raw(args, extra_args, remote, config):
 def handle_query(args, extra_args, remote, config):
     LOG.debug('pre-parsed %s', args.query)
 
+    QUERYMAP.update(config.get('queries', {}))
     query = [
-            (config['queries'][term].format(**remote.remote)
-                if term in config.get('queries', {})
-                else term)
+            (QUERYMAP[term].format(**remote.remote)
+                if term in QUERYMAP
+                else term.format(**remote.remote))
                 for term in args.query]
 
     query = sum((shlex.split(term) for term in query), [])
