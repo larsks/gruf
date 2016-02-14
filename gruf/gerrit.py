@@ -56,6 +56,7 @@ class Gerrit(object):
                 }
 
     def run(self, *args):
+        LOG.debug('run %s', args)
         return subprocess.check_output([
             'ssh', '-p', self.remote['port'],
             '-o', 'BatchMode=yes',
