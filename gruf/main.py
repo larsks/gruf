@@ -11,6 +11,8 @@ import urlparse
 import yaml
 import jinja2
 
+import pkg_resources
+
 from gruf.exc import *
 from gruf.gerrit import Gerrit
 from gruf.git import rev_parse
@@ -20,7 +22,7 @@ XDG_CONFIG_DIR = os.environ.get(
     'XDG_CONFIG_DIR',
     os.path.join(os.environ['HOME'], '.config'))
 DEFAULT_CONFIG_DIR=os.path.join(XDG_CONFIG_DIR, 'gruf')
-DEFAULT_TEMPLATE = '''{{change.number}} {{change.owner.username}} {{change.subject}}
+DEFAULT_TEMPLATE = '''{{number}} {{owner.username}} {{subject}}
 '''
 
 RAW_COMMANDS = [
@@ -30,7 +32,7 @@ RAW_COMMANDS = [
     'version',
     ]
 
-def handle_url_for(args, remote, config):
+def handle_url_for(args, extra_args, remote, config):
     if args.git:
         res = remote.lookup_by_rev(args.rev)
     else:
@@ -41,7 +43,7 @@ def handle_url_for(args, remote, config):
     else:
         raise TooManyChanges()
 
-def handle_view(args, remote, config):
+def handle_view(args, extra_args, remote, config):
     if args.git:
         res = remote.lookup_by_rev(args.rev)
     else:
@@ -52,17 +54,17 @@ def handle_view(args, remote, config):
     else:
         raise TooManyChanges()
 
-def handle_get(args, remote, config):
+def handle_get(args, extra_args, remote, config):
     print remote.remote.get(args.attr, '')
 
-def handle_raw(args, remote, config):
+def handle_raw(args, extra_args, remote, config):
     if args.args and args.args[0] == '--':
         args.args = args.args[1:]
 
-    res = remote.run(*[args._command] + list(args.args))
+    res = remote.run(*[args._command] + extra_args + args.args)
     sys.stdout.write(res)
 
-def handle_query(args, remote, config):
+def handle_query(args, extra_args, remote, config):
     LOG.debug('pre-parsed %s', args.query)
 
     query = [
@@ -75,7 +77,7 @@ def handle_query(args, remote, config):
 
     LOG.debug('post-parsed %s', query)
 
-    res = remote.query(*query)
+    res = remote.query(*(extra_args + query))
 
     if args.format == 'json':
         sys.stdout.write(json.dumps(res, indent=2))
@@ -83,7 +85,12 @@ def handle_query(args, remote, config):
         sys.stdout.write(yaml.safe_dump(res, default_flow_style=False))
     else:
         env = jinja2.Environment(
-                loader = jinja2.FileSystemLoader(args.template_dir))
+                loader = jinja2.FileSystemLoader([
+                    args.template_dir,
+                    pkg_resources.resource_filename(
+                        __name__,
+                        'templates'),
+                    ]))
 
         if args.template.startswith('@'):
             try:
@@ -149,11 +156,11 @@ def parse_args():
         p_raw.add_argument('args', nargs=argparse.REMAINDER)
         p_raw.set_defaults(_command=cmd)
 
-    return p.parse_args()
+    return p.parse_known_args()
 
 
 def main():
-    args = parse_args()
+    args, extra_args = parse_args()
     if hasattr(args, 'template_dir'):
         if args.template_dir is None:
             args.template_dir = os.path.join(
@@ -163,6 +170,7 @@ def main():
         level=args.loglevel)
 
     LOG.debug('args %s', args)
+    LOG.debug('extra_args %s', extra_args)
 
     try:
         with open(args.config) as fd:
@@ -174,15 +182,15 @@ def main():
     LOG.debug('gerrit remote %s', remote.remote)
 
     if args._command == 'url-for':
-        handle_url_for(args, remote, config)
+        handle_url_for(args, extra_args, remote, config)
     elif args._command == 'view':
-        handle_view(args, remote, config)
+        handle_view(args, extra_args, remote, config)
     elif args._command == 'get':
-        handle_get(args, remote, config)
+        handle_get(args, extra_args, remote, config)
     elif args._command == 'query':
-        handle_query(args, remote, config)
+        handle_query(args, extra_args, remote, config)
     else:
-        handle_raw(args, remote, config)
+        handle_raw(args, extra_args, remote, config)
 
 if __name__ == '__main__':
     try:

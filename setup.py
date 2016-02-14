@@ -6,4 +6,5 @@ setup(name='gruf',
       url='https://github.com/larsks/gruf',
       version='0.1',
       packages=find_packages(),
+      package_data={'gruf': ['templates/*.h2']},
       entry_points={'console_scripts': ['gerrit = gruf.main:main',],})

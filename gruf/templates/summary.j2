@@ -1,0 +1,8 @@
+[{{'%08s'|format(number)}}] {{subject}}
+  {{'%08s'|format(' ')}} {{owner.username}} {{url}}
+{% if currentPatchSet is defined %}
+  {{'%08s'|format(' ')}} Patch set {{currentPatchSet.number}}:
+{% for approval in currentPatchSet.approvals %}  {{
+'%08s'|format(' ')}} {{approval.type}} {{approval.value}}
+{% endfor %}
+{% endif %}

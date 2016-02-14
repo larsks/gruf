@@ -1,0 +1,4 @@
+[{{'%08s'|format(number)}}] {{project}} {{owner.username}} {{subject}} {%
+if currentPatchSet is defined %}[ {%
+for approval in currentPatchSet.approvals %}{{approval.type[0]}}{{'%2s'|format(approval.value)}}{%
+if not loop.last%}/{%endif%}{%endfor%} ]{%endif%}
