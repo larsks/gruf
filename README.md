@@ -8,27 +8,58 @@ For the latest and greatest:
 
     pip install git+https://github.com/larsks/gruf
 
+## Configuration
+
+Gruf will attempt to read `$XDG_CONFIG_DIR/gruf/gruf.yml` (which
+normally means `$HOME/.config/gruf/gruf.yml`), which is a [YAML][]
+format file that can contain a `queries` key that maps terms in your
+query to alias expansions.  So if you have:
+
+    queries:
+       oooq: project:redhat-openstack/tripleo-quickstart
+
+You can ask for:
+
+    $ gruf query oooq status:open
+
+And end up executing:
+
+    query project:redhat-openstack/tripleo-quickstart status:open
+
+### Templates
+
+The `gruf query` command produces results by passing the query results
+through a [Jinja2][] template.  You can override this by passing a
+literal template as an argument to the `-t` option, or a named
+template by prefixing the argument with `@`, as in:
+
+    gruf query -t @summary ...
+
+Gruf will look for templates in the `templates` directory of your
+configuration directory.  There are a few examples in the
+`gruf/templates` directory in the source distribution.
+
 ## Examples
 
 - Get the URL of the gerrit server for the current git repository:
 
-        $ gerrit get url
+        $ gruf get url
         ssh://yourname@review.gerrithub.io:29418/yourproject/yourrepo.git
 
 - Get the URL for the Gerrit review associated with a particular git
   revision:
 
-        $ gerrit url-for -g HEAD
+        $ gruf url-for -g HEAD
         https://review.gerrithub.io/263041
 
 - Get a list of open reviews for the current project:
 
-        $ gerrit query open here
+        $ gruf query open here
 
 - Get a list of reviews including information about the latest
   patch set from a specific project:
 
-        $ gerrit query -t @summary \
+        $ gruf query -t @summary \
           status:open project:redhat-openstack/tripleo-quickstart \
           --current-patch-set
         [  263006] Fedora support for qemu emulation
@@ -64,3 +95,5 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+[yaml]: http://yaml.org/
+[jinja2]: http://jinja.pocoo.org/
