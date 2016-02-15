@@ -63,7 +63,7 @@ class Gerrit(object):
             '-o', 'ForwardX11=no',
             '-o', 'ForwardX11Trusted=no',
             '{user}@{host}'.format(**self.remote),
-            'gerrit'] + list(args))
+            'gerrit'] + ['"%s"' % x if ' ' in x else x for x in args])
 
     def query(self, *args):
         res = self.run('query', '--format', 'JSON', *args)
