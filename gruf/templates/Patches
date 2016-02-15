@@ -7,5 +7,4 @@
                {{'%-15s'|format(approval.by.username)}} {{approval.type}} {{approval.value}}
 {%- endfor %}
 {% endfor %}
-
 {% endfor %}
