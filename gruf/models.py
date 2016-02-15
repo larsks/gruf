@@ -1,6 +1,8 @@
 import json
 
 class Model (object):
+    streaming = False
+
     def __init__(self, stdout):
         self.stdout = stdout
         self.decode_response()
@@ -86,6 +88,8 @@ class GroupListResponse (Model):
                 for line in self.stdout]
 
 class EventStream (Model):
+    streaming = True
+
     def decode_response(self):
         pass
 

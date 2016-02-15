@@ -99,8 +99,13 @@ def main():
             args.template if args.template
             else res.__class__.__name__)
 
-    sys.stdout.write(
-            t.render(result=res, config=config, args=args).encode('utf-8'))
+    if res.streaming:
+        for item in res:
+            sys.stdout.write(
+                t.render(item=item, config=config, args=args).encode('utf-8'))
+    else:
+        sys.stdout.write(
+                t.render(result=res, config=config, args=args).encode('utf-8'))
 
 if __name__ == '__main__':
     main()
