@@ -13,92 +13,28 @@ import jinja2
 
 import pkg_resources
 
-from gruf.exc import *
 from gruf.gerrit import Gerrit
-from gruf.git import rev_parse
+from gruf.exc import *
+from gruf import git
+from gruf import filters
 
 LOG = logging.getLogger(__name__)
-XDG_CONFIG_DIR = os.environ.get(
-    'XDG_CONFIG_DIR',
-    os.path.join(os.environ['HOME'], '.config'))
-DEFAULT_CONFIG_DIR=os.path.join(XDG_CONFIG_DIR, 'gruf')
-DEFAULT_TEMPLATE = '''{{number}} {{owner.username}} {{subject}}
-'''
-
+CONFIG_DIR = os.path.join(
+        os.environ.get('XDG_CONFIG_DIR',
+            os.path.join(os.environ['HOME'], '.config')),
+        'gruf')
 QUERYMAP = {
         'mine': 'owner:self',
         'open': 'status:open',
         'here': 'project:{project}',
         }
 
-RAW_COMMANDS = [
-    'ban-commit', 'create-branch',
-    'ls-groups', 'ls-members', 'ls-projects',
-    'rename-group', 'set-head', 'set-reviewers',
-    'version',
-    ]
+class ResultFilter(object):
+    def __init__(self, args, config):
+        self.config = config
+        self.args = args
 
-def handle_url_for(args, extra_args, remote, config):
-    if args.git:
-        res = remote.lookup_by_rev(args.rev)
-    else:
-        res = remote.query(*[args.rev])
-
-    if len(res) == 1:
-        print res[0]['url']
-    else:
-        raise TooManyChanges()
-
-def handle_view(args, extra_args, remote, config):
-    if args.git:
-        res = remote.lookup_by_rev(args.rev)
-    else:
-        res = remote.query(*[args.rev])
-
-    if len(res) == 1:
-        subprocess.call(['xdg-open', res[0]['url']])
-    else:
-        raise TooManyChanges()
-
-def handle_get(args, extra_args, remote, config):
-    print remote.remote.get(args.attr, '')
-
-def handle_raw(args, extra_args, remote, config):
-    if args.args and args.args[0] == '--':
-        args.args = args.args[1:]
-
-    res = remote.run(*[args._command] + extra_args + args.args)
-    sys.stdout.write(res)
-
-def handle_review(args, extra_args, remote, config):
-    if args.git:
-        args.rev = rev_parse(args.rev)
-
-    LOG.debug('review %s', args.rev)
-
-    sys.stdout.write(remote.run(*['review'] + extra_args + [args.rev]))
-
-def handle_query(args, extra_args, remote, config):
-    LOG.debug('pre-parsed %s', args.query)
-
-    QUERYMAP.update(config.get('queries', {}))
-    query = [
-            (shlex.split(QUERYMAP[term].format(**remote.remote))
-                if term in QUERYMAP
-                else [term.format(**remote.remote)])
-                for term in args.query]
-
-    query = sum(query, [])
-    LOG.debug('post-parsed %s', query)
-
-    res = remote.query(*(extra_args + query))
-
-    if args.format == 'json':
-        sys.stdout.write(json.dumps(res, indent=2))
-    elif args.format == 'yaml':
-        sys.stdout.write(yaml.safe_dump(res, default_flow_style=False))
-    else:
-        env = jinja2.Environment(
+        self.env = jinja2.Environment(
                 loader = jinja2.FileSystemLoader([
                     args.template_dir,
                     pkg_resources.resource_filename(
@@ -106,19 +42,41 @@ def handle_query(args, extra_args, remote, config):
                         'templates'),
                     ]))
 
-        if args.template.startswith('@'):
+        self.env.filters['to_json'] = filters.to_json
+        self.env.filters['to_yaml'] = filters.to_yaml
+
+    def handle_query(self, res):
+        template = (self.args.template if self.args.template
+                else '@default')
+
+        if template.startswith('@'):
             try:
-                t = env.get_template(args.template[1:])
-            except jinja2.exceptions.TemplateNotFound:
-                t = env.get_template(args.template[1:] + '.j2')
+                t = self.env.get_template(template[1:])
+            except jinja2.TemplateNotFound:
+                t = self.env.get_template(template[1:] + '.j2')
         else:
-            t = env.from_string(args.template)
+            t = self.env.from_string(template)
 
         for change in res:
-            out = t.render(**change)
+            out = t.render(change=change, **change)
             sys.stdout.write(out)
             if not out.endswith('\n'):
                 sys.stdout.write('\n')
+
+    def handle_ls_projects(self, res):
+        for proj in res:
+            print '{name} {state}'.format(**proj)
+
+    def handle(self, cmd, results):
+        try:
+            filter = getattr(self, 'handle_%s' % cmd.replace('-', '_'))
+        except AttributeError:
+            raise NoFilter(cmd)
+
+        filter(results)
+
+def get_gerrit_remote():
+    return git.get_config('remote.gerrit.url')
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -130,57 +88,21 @@ def parse_args():
                    action='store_const',
                    const='DEBUG',
                    dest='loglevel')
+    p.add_argument('--remote', '-r')
     p.add_argument('--config', '-f',
-            default=os.path.join(DEFAULT_CONFIG_DIR, 'gruf.yml'))
-
-    sub = p.add_subparsers(help='Subcommands')
-    p_query = sub.add_parser('query')
-    p_query.add_argument('--json', '-j',
-            action='store_const',
-            const='json',
-            dest='format')
-    p_query.add_argument('--yaml', '-y',
-            action='store_const',
-            const='yaml',
-            dest='format')
-    p_query.add_argument('--template-dir', '-T')
-    p_query.add_argument('--template', '-t',
-            default=DEFAULT_TEMPLATE)
-    p_query.add_argument('query', nargs='*')
-    p_query.set_defaults(_command='query', format='summary')
-
-    p_get = sub.add_parser('get')
-    p_get.add_argument('attr')
-    p_get.set_defaults(_command='get')
-
-    p_url_for = sub.add_parser('url-for')
-    p_url_for.add_argument('--git', '-g',
+            default=os.path.join(CONFIG_DIR, 'gruf.yml'))
+    p.add_argument('-t', '--template')
+    p.add_argument('--template-dir', '-T')
+    p.add_argument('--yaml', '-y',
             action='store_true')
-    p_url_for.add_argument('rev')
-    p_url_for.set_defaults(_command='url-for')
-
-    p_view = sub.add_parser('view')
-    p_view.add_argument('--git', '-g',
+    p.add_argument('--json', '-j',
             action='store_true')
-    p_view.add_argument('rev')
-    p_view.set_defaults(_command='view')
+    p.add_argument('cmd', nargs=argparse.REMAINDER)
 
-    p_review = sub.add_parser('review')
-    p_review.add_argument('--git', '-g',
-            action='store_true')
-    p_review.add_argument('rev')
-    p_review.set_defaults(_command='review')
-
-    for cmd in RAW_COMMANDS:
-        p_raw = sub.add_parser(cmd)
-        p_raw.add_argument('args', nargs=argparse.REMAINDER)
-        p_raw.set_defaults(_command=cmd)
-
-    return p.parse_known_args()
-
+    return p.parse_args()
 
 def main():
-    args, extra_args = parse_args()
+    args = parse_args()
     if hasattr(args, 'template_dir'):
         if args.template_dir is None:
             args.template_dir = os.path.join(
@@ -190,7 +112,6 @@ def main():
         level=args.loglevel)
 
     LOG.debug('args %s', args)
-    LOG.debug('extra_args %s', extra_args)
 
     try:
         with open(args.config) as fd:
@@ -198,28 +119,39 @@ def main():
     except IOError:
         config = {}
 
-    remote = Gerrit()
-    LOG.debug('gerrit remote %s', remote.remote)
+    filter = ResultFilter(args, config)
+
+    if args.remote is None:
+        args.remote = get_gerrit_remote()
+
+    LOG.debug('remote %s', args.remote)
+    g = Gerrit(args.remote,
+            querymap=config.get('querymap'))
+
+    cmd = args.cmd.pop(0)
+    cmdargs = [git.rev_parse(arg[4:])
+            if arg.startswith('git:')
+            else arg
+            for arg in args.cmd]
 
     try:
-        if args._command == 'url-for':
-            handle_url_for(args, extra_args, remote, config)
-        elif args._command == 'view':
-            handle_view(args, extra_args, remote, config)
-        elif args._command == 'get':
-            handle_get(args, extra_args, remote, config)
-        elif args._command == 'query':
-            handle_query(args, extra_args, remote, config)
-        elif args._command == 'review':
-            handle_review(args, extra_args, remote, config)
-        else:
-            handle_raw(args, extra_args, remote, config)
-    except GrufError as err:
-        LOG.error(err)
+        res = getattr(g, cmd)(*cmdargs)
+    except subprocess.CalledProcessError:
+        LOG.error('gerrit command failed')
         sys.exit(1)
-    except subprocess.CalledProcessError as err:
-        sys.exit(1)
+
+    # LKS: This is too hacky.
+    if args.yaml:
+        sys.stdout.write(yaml.safe_dump(list(res), default_flow_style=False))
+    elif args.json:
+        sys.stdout.write(json.dumps(list(res), indent=2))
+    else:
+        try:
+            filter.handle(cmd, res)
+        except NoFilter:
+            for item in res:
+                sys.stdout.write(item)
+                sys.stdout.write('\n')
 
 if __name__ == '__main__':
     main()
-

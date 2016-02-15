@@ -12,3 +12,6 @@ class UnknownRemoteAttribute(GrufError):
 
 class TooManyChanges(GrufError):
     '''Expecting one result but received many'''
+
+class NoFilter(GrufError):
+    '''No filter is available for the specified command'''

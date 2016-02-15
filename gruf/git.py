@@ -12,3 +12,4 @@ def get_config(k):
     LOG.debug('looking up config val %s', k)
     return subprocess.check_output([
         'git', 'config', '--get', k]).strip()
+
