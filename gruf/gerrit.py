@@ -53,7 +53,7 @@ def lineiterator(func):
 
     return _
 
-def projectiterator(func):
+def mapiterator(func):
     def _(*args, **kwargs):
         res = func(*args, **kwargs)
         items = json.loads(res)
@@ -79,7 +79,11 @@ class Gerrit(object):
             self.querymap.update(querymap)
 
     def ssh(self, *args, **kwargs):
+        # transform any keyword arguments in
+        # k:v strings, useful in queries.
         args = args + tuple('{}:{}'.format(k,v) for k,v in kwargs.items())
+
+        # quote any arguments containing spaces.
         args = ['"{}"'.format(arg) if ' ' in arg else arg
                 for arg in args]
 
@@ -110,7 +114,7 @@ class Gerrit(object):
                     jsoniterator(self.ssh), k, '--format', 'json')
         elif k in self.json_map_result:
             return functools.partial(
-                    projectiterator(self.ssh), k, '--format', 'json')
+                    mapiterator(self.ssh), k, '--format', 'json')
         else:
             return functools.partial(
                     lineiterator(self.ssh), k)
