@@ -32,7 +32,7 @@ QUERYMAP = {
         }
 
 RAW_COMMANDS = [
-    'review', 'ban-commit', 'create-branch',
+    'ban-commit', 'create-branch',
     'ls-groups', 'ls-members', 'ls-projects',
     'rename-group', 'set-head', 'set-reviewers',
     'version',
@@ -70,18 +70,25 @@ def handle_raw(args, extra_args, remote, config):
     res = remote.run(*[args._command] + extra_args + args.args)
     sys.stdout.write(res)
 
+def handle_review(args, extra_args, remote, config):
+    if args.git:
+        args.rev = rev_parse(args.rev)
+
+    LOG.debug('review %s', args.rev)
+
+    sys.stdout.write(remote.run(*['review'] + extra_args + [args.rev]))
+
 def handle_query(args, extra_args, remote, config):
     LOG.debug('pre-parsed %s', args.query)
 
     QUERYMAP.update(config.get('queries', {}))
     query = [
-            (QUERYMAP[term].format(**remote.remote)
+            (shlex.split(QUERYMAP[term].format(**remote.remote))
                 if term in QUERYMAP
-                else term.format(**remote.remote))
+                else [term.format(**remote.remote)])
                 for term in args.query]
 
-    query = sum((shlex.split(term) for term in query), [])
-
+    query = sum(query, [])
     LOG.debug('post-parsed %s', query)
 
     res = remote.query(*(extra_args + query))
@@ -158,6 +165,12 @@ def parse_args():
     p_view.add_argument('rev')
     p_view.set_defaults(_command='view')
 
+    p_review = sub.add_parser('review')
+    p_review.add_argument('--git', '-g',
+            action='store_true')
+    p_review.add_argument('rev')
+    p_review.set_defaults(_command='review')
+
     for cmd in RAW_COMMANDS:
         p_raw = sub.add_parser(cmd)
         p_raw.add_argument('args', nargs=argparse.REMAINDER)
@@ -188,20 +201,25 @@ def main():
     remote = Gerrit()
     LOG.debug('gerrit remote %s', remote.remote)
 
-    if args._command == 'url-for':
-        handle_url_for(args, extra_args, remote, config)
-    elif args._command == 'view':
-        handle_view(args, extra_args, remote, config)
-    elif args._command == 'get':
-        handle_get(args, extra_args, remote, config)
-    elif args._command == 'query':
-        handle_query(args, extra_args, remote, config)
-    else:
-        handle_raw(args, extra_args, remote, config)
-
-if __name__ == '__main__':
     try:
-        sys.exit(main())
+        if args._command == 'url-for':
+            handle_url_for(args, extra_args, remote, config)
+        elif args._command == 'view':
+            handle_view(args, extra_args, remote, config)
+        elif args._command == 'get':
+            handle_get(args, extra_args, remote, config)
+        elif args._command == 'query':
+            handle_query(args, extra_args, remote, config)
+        elif args._command == 'review':
+            handle_review(args, extra_args, remote, config)
+        else:
+            handle_raw(args, extra_args, remote, config)
     except GrufError as err:
         LOG.error(err)
         sys.exit(1)
+    except subprocess.CalledProcessError as err:
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
+
