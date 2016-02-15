@@ -12,10 +12,10 @@ For the latest and greatest:
 
 Gruf will attempt to read `$XDG_CONFIG_DIR/gruf/gruf.yml` (which
 normally means `$HOME/.config/gruf/gruf.yml`), which is a [YAML][]
-format file that can contain a `queries` key that maps terms in your
+format file that can contain a `querymap` key that maps terms in your
 query to alias expansions.  So if you have:
 
-    queries:
+    querymap:
        oooq: project:redhat-openstack/tripleo-quickstart
 
 You can ask for:
@@ -25,6 +25,11 @@ You can ask for:
 And end up executing:
 
     query project:redhat-openstack/tripleo-quickstart status:open
+
+Additionally, `gruf` will replace any argument prefixed with `git:`
+with the result of calling `git rev-parse` on the rest of the
+argument, so you can use `git:HEAD` or `git:mytag` any place that
+gerrit will accept a commit id.
 
 ### Templates
 
@@ -41,17 +46,6 @@ configuration directory.  There are a few examples in the
 
 ## Examples
 
-- Get the URL of the gerrit server for the current git repository:
-
-        $ gruf get url
-        ssh://yourname@review.gerrithub.io:29418/yourproject/yourrepo.git
-
-- Get the URL for the Gerrit review associated with a particular git
-  revision:
-
-        $ gruf url-for -g HEAD
-        https://review.gerrithub.io/263041
-
 - Get a list of open reviews for the current project:
 
         $ gruf query open here
@@ -60,7 +54,7 @@ configuration directory.  There are a few examples in the
   patch set from a specific project:
 
         $ gruf query -t @summary \
-          status:open project:redhat-openstack/tripleo-quickstart \
+          open project:redhat-openstack/tripleo-quickstart \
           --current-patch-set
         [  263006] Fedora support for qemu emulation
                    ryansb https://review.gerrithub.io/263006
@@ -76,6 +70,9 @@ configuration directory.  There are a few examples in the
                    Verified -1
         ...
 
+- Approve the current commit:
+
+        $ gruf review --code-review +2 --verified +1 git:HEAD
 
 ## License
 
