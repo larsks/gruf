@@ -47,7 +47,7 @@ def parse_gerrit_remote(url):
 
 def stdout_reader(p):
     while True:
-        line = p.stdout.readline()
+        line = p.stdout.readline().decode('utf-8')
         LOG.debug('line %s', line)
         if not line:
             break

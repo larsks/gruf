@@ -1,0 +1,3 @@
+{% for group in result -%}
+{{'%-20s'|format(group.name)}} {{group.uuid}} {{group.public}}
+{% endfor %}

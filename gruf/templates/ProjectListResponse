@@ -1,0 +1,3 @@
+{% for project in result -%}
+{{project}} {{result.projects[project].state}}
+{% endfor %}

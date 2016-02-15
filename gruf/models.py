@@ -95,4 +95,4 @@ class EventStream (Model):
     @property
     def events(self):
         for line in self.stdout:
-            yield json.dumps(line)
+            yield json.loads(line)

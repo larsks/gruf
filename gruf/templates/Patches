@@ -1,0 +1,11 @@
+{% for change in result -%}
+{{'%-8s'|format(change.number)}} {{'%-8s'|format(change.owner.username)}} {{change.subject}}
+                  {{change.url}}
+{% for patch in change|reverse %}
+         [{{'%03d'|format(patch.number|int)}}] {{patch.ref}}
+{%- for approval in patch %}
+               {{'%-15s'|format(approval.by.username)}} {{approval.type}} {{approval.value}}
+{%- endfor %}
+{% endfor %}
+
+{% endfor %}

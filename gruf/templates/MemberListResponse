@@ -1,0 +1,3 @@
+{% for member in result -%}
+{{'%-8s'|format(member.id)}} {{'%-15s'|format(member.username)}} {{'%-30s'|format(member.email)}} {{member.fullname}}
+{% endfor %}
