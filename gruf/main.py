@@ -89,7 +89,10 @@ def main():
     cmd = args.cmd.pop(0)
     cmdargs = args.cmd
 
-    if cmd in CMDALIAS:
+    cmdalias = CMDALIAS
+    cmdalias.update(config.get('cmdalias', {}))
+
+    if cmd in cmdalias:
         alias = CMDALIAS[cmd]
         if 'cmd' in alias:
             newcmd = shlex.split(alias['cmd'])
@@ -97,6 +100,8 @@ def main():
             cmdargs = newcmd + cmdargs
         if 'template' in alias:
             args.template = alias['template']
+        if 'inline_template' in alias:
+            args.inline_template = alias['inline_template']
 
     cmd_func = cmd.replace('-', '_')
     try:
