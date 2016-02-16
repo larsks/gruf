@@ -1,4 +1,4 @@
-Owner: {{owner.name}} ({{owner.username}} <{{owner.email}}>
+Owner: {{owner.name}} ({{owner.username}}) <{{owner.email}}>
 Change-ID: {{id}} ({{number}})
 URL: {{url}}
 Status: {{status}}
