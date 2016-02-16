@@ -146,6 +146,7 @@ class Gerrit(object):
             'query',
             '--format', 'json',
             '--current-patch-set',
+            '--comments',
             '--all-approvals',
             ] + args, **kwargs)
 

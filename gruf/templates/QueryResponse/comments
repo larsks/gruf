@@ -1,0 +1,18 @@
+Owner: {{owner.name}} ({{owner.username}}) <{{owner.email}}>
+Change-ID: {{id}} ({{number}})
+URL: {{url}}
+Status: {{status}}
+Branch: {{branch}}
+Topic: {{topic}}
+Created: {{createdOn|strftime('%Y-%m-%d %H:%M:%S')}}
+Updated: {{lastUpdated|strftime('%Y-%m-%d %H:%M:%S')}}
+Subject: {{subject}}
+
+{% for comment in comments %}
+From: {{comment.reviewer.name}} ({{comment.reviewer.username}}) <{{comment.reviewer.email}}>
+
+{{comment.message|indent(4, indentfirst=True)}}
+
+{% endfor %}
+
+
