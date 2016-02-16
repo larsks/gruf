@@ -100,15 +100,17 @@ def main():
     template_name='{}/{}'.format(
             res.__class__.__name__,
             args.template or 'default')
-    t = env.get_template(template_name)
 
-    if res.streaming:
-        for item in res:
+    for item in res:
+        try:
             sys.stdout.write(
-                t.render(item=item, config=config, args=args).encode('utf-8'))
-    else:
-        sys.stdout.write(
-                t.render(result=res, config=config, args=args).encode('utf-8'))
+                t.render(item=item, **item).encode('utf-8'))
+        except TypeError:
+            # we get here if item is not a mapping (which will
+            # happen currently for UnstructuredResponse
+            # results).
+            sys.stdout.write(
+                t.render(item=item).encode('utf-8'))
 
 if __name__ == '__main__':
     main()

@@ -1,3 +1,2 @@
-{% for change in result -%}
-{{'%-8s'|format(change.number)}} {{'%-8s'|format(change.owner.username)}} {{change.subject}}
-{% endfor %}
+{{'%-8s'|format(number)}} {{'%-8s'|format(owner.username)}} {{subject}}
+
