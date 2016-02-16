@@ -20,11 +20,17 @@ query to alias expansions.  So if you have:
 
 You can ask for:
 
-    $ gruf query oooq status:open
+    $ gruf query oooq open
 
 And end up executing:
 
     query project:redhat-openstack/tripleo-quickstart status:open
+
+The following aliases are built-in:
+
+- `mine`: `owner:self`
+- `here`: `project:<current project name>`
+- `open`: `status:open`
 
 Additionally, `gruf` will replace any argument prefixed with `git:`
 with the result of calling `git rev-parse` on the rest of the
@@ -35,44 +41,44 @@ gerrit will accept a commit id.
 
 The `gruf query` command produces results by passing the query results
 through a [Jinja2][] template.  You can override this by passing a
-literal template as an argument to the `-t` option, or a named
-template by prefixing the argument with `@`, as in:
+template name with the `-t` option.  Gruf will first search for
+templates in a directory named after the class of the result, and then
+without the class prefix.  For example, if you run:
 
-    gruf query -t @summary ...
+    gruf -t yaml query open here
 
-Gruf will look for templates in the `templates` directory of your
-configuration directory.  There are a few examples in the
-`gruf/templates` directory in the source distribution.
+Gruf will first attempt to load the template `QueryResponse/yaml`, and
+if that fails it will look for `yaml`.
 
 ## Examples
 
-- Get a list of open reviews for the current project:
+- Get a list of open changes for the current project:
 
         $ gruf query open here
 
-- Get a list of reviews including information about the latest
-  patch set from a specific project:
+- Get a list of URLs for the same thing:
 
-        $ gruf query -t @summary \
-          open project:redhat-openstack/tripleo-quickstart \
-          --current-patch-set
-        [  263006] Fedora support for qemu emulation
-                   ryansb https://review.gerrithub.io/263006
+        $ gruf url-for open here
 
-                   Patch set 1:
-                   Code-Review 2
-                   Verified -1
+- Approve the change associated with the current commit:
 
-        [  262882] introduce global "nodes" configuration role
-                   larsks https://review.gerrithub.io/262882
+        $ gruf confirm git:HEAD
 
-                   Patch set 6:
-                   Verified -1
-        ...
+  This is actually shorthand for:
 
-- Approve the current commit:
+        $ gruf review --code-review 2 --verified 1 git:HEAD
 
-        $ gruf review --code-review +2 --verified +1 git:HEAD
+- Abandon a change with a comment:
+
+        $ gruf abandon -m "this was a terrible idea" 263262,1
+
+  This is actually shorthand for:
+
+        $ gruf review --abandon 263262,1
+
+- See detailed information about changes:
+
+        $ gruf show open here
 
 ## License
 
