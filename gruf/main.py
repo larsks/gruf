@@ -20,14 +20,24 @@ import gruf.gerrit
 import gruf.filters
 
 LOG = logging.getLogger(__name__)
+
 CONFIG_DIR = os.path.join(
         os.environ.get('XDG_CONFIG_DIR',
             os.path.join(os.environ['HOME'], '.config')),
         'gruf')
-QUERYMAP = {
-        'mine': 'owner:self',
-        'open': 'status:open',
-        'here': 'project:{project}',
+
+CMDALIAS = {
+        'confirm': {'cmd': 'review --code-review 2 --verified 1'},
+        'submit': {'cmd': 'review --submit'},
+        'abandon': {'cmd': 'review --abandon'},
+        'url-for': {
+            'cmd': 'query',
+            'template': 'url',
+            },
+        'show': {
+            'cmd': 'query',
+            'template': 'detailed',
+            }
         }
 
 def parse_args():
@@ -55,10 +65,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    if hasattr(args, 'template_dir'):
-        if args.template_dir is None:
-            args.template_dir = os.path.join(
-                    os.path.dirname(args.config), 'templates')
+    if args.template_dir is None:
+        args.template_dir = os.path.join(
+                os.path.dirname(args.config), 'templates')
 
     logging.basicConfig(
         level=args.loglevel)
@@ -78,6 +87,15 @@ def main():
 
     cmd = args.cmd.pop(0)
     cmdargs = args.cmd
+
+    if cmd in CMDALIAS:
+        alias = CMDALIAS[cmd]
+        if 'cmd' in alias:
+            newcmd = shlex.split(alias['cmd'])
+            cmd = newcmd.pop(0)
+            cmdargs = newcmd + cmdargs
+        if 'template' in alias:
+            args.template = alias['template']
 
     cmd_func = cmd.replace('-', '_')
     try:
@@ -100,6 +118,11 @@ def main():
     template_name='{}/{}'.format(
             res.__class__.__name__,
             args.template or 'default')
+
+    try:
+        t = env.get_template(template_name)
+    except jinja2.TemplateNotFound:
+        t = env.get_template(args.template)
 
     for item in res:
         try:
