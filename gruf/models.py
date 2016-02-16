@@ -52,17 +52,20 @@ class QueryResponse (Model):
 
 class ProjectListResponse (Model):
     def __iter__(self):
-        return iter(self.projects)
+        return (dict(name=k, **v) for k,v in self.projects.items())
 
     def decode_response(self):
         self.projects = json.loads('\n'.join(line for line in self.stdout))
 
 class UnstructuredResponse (Model):
+    def __iter__(self):
+        return iter(self.response)
+
     def decode_response(self):
-        self.response = '\n'.join(line for line in self.stdout)
+        self.response = [line for line in self.stdout]
 
     def __str__(self):
-        return self.response
+        return '\n'.join(self.response)
 
 class MemberListResponse (Model):
     fields = ('id', 'username', 'fullname', 'email')
