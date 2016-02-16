@@ -81,7 +81,7 @@ def main():
     except IOError:
         config = {}
 
-    g = gruf.gerrit.Gerrit('.',
+    g = gruf.gerrit.Gerrit(
             remote=args.remote,
             querymap=config.get('querymap'))
     LOG.debug('remote %s', g.remote)

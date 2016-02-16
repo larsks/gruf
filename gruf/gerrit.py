@@ -9,10 +9,10 @@ import sys
 import urlparse
 import yaml
 import functools
-import git
 
 from gruf.exc import *  # NOQA
 from gruf.models import *  # NOQA
+from gruf.git import get_remote_info, rev_parse
 
 LOG = logging.getLogger(__name__)
 GERRIT_PORT = 29418
@@ -79,13 +79,12 @@ class Gerrit(object):
             'open': 'status:open',
             }
 
-    def __init__(self, repopath, remote=None, querymap=None):
+    def __init__(self, remote=None, querymap=None):
         remote = remote if remote is not None else 'gerrit'
 
-        self.repo = git.Repo(repopath)
-        self.url = self.repo.remotes[remote].url
-
-        self.remote = parse_gerrit_remote(self.url)
+        self.remote = dict(zip(
+            ('user', 'host', 'port', 'project'),
+            get_remote_info(remote)))
         self.querymap = self.default_querymap
         if querymap is not None:
             self.querymap.update(querymap)
@@ -129,8 +128,7 @@ class Gerrit(object):
     def xform_query_args(self, args):
         return [
                 self.query_alias(arg) if arg in self.querymap
-                else self.repo.rev_parse(arg[4:]).hexsha
-                    if arg.startswith('git:')
+                else rev_parse(arg[4:]) if arg.startswith('git:')
                 else arg
                 for arg in args
                 ]
