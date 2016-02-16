@@ -1,0 +1,4 @@
+{% for change in result -%}
+{{change|to_yaml}}
+{% endfor %}
+

@@ -1,0 +1,4 @@
+{{item.type}}
+{{item|to_json}}
+---
+

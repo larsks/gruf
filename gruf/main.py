@@ -92,12 +92,15 @@ def main():
                     __name__,
                     'templates'),
                 ]))
+
     env.filters['to_json'] = gruf.filters.to_json
     env.filters['to_yaml'] = gruf.filters.to_yaml
+    env.filters['strftime'] = gruf.filters.strftime
 
-    t = env.get_template(
-            args.template if args.template
-            else res.__class__.__name__)
+    template_name='{}/{}'.format(
+            res.__class__.__name__,
+            args.template or 'default')
+    t = env.get_template(template_name)
 
     if res.streaming:
         for item in res:

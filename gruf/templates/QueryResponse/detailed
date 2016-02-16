@@ -1,0 +1,25 @@
+{% for change in result %}
+Owner: {{change.owner.name}} ({{change.owner.username}} <{{change.owner.email}}>
+Change-ID: {{change.id}} ({{change.number}})
+URL: {{change.url}}
+Status: {{change.status}}
+Branch: {{change.branch}}
+Topic: {{change.topic}}
+Created: {{change.createdOn|strftime('%Y-%m-%d %H:%M:%S')}}
+Updated: {{change.lastUpdated|strftime('%Y-%m-%d %H:%M:%S')}}
+Subject: {{change.subject}}
+
+{{change.commitMessage}}
+
+Current patch set:
+
+|{% set c = change.currentPatchSet %}
+| Author: {{c.author.name}} ({{c.author.username}} <{{c.author.email}}>
+| Ref: {{c.ref}}
+| {% for approval in c.approvals %}
+| Approved-by: {{approval.by.name}} {{approval.type}} {{approval.value}}
+| Changes: +{{c.sizeInsertions}}/{{c.sizeDeletions}}
+| Created: {{c.createdOn|strftime('%Y-%m-%d %H:%M:%S')}}
+| {% endfor %}
+======================================================================
+{% endfor %}
