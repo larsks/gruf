@@ -1,2 +1,1 @@
 {{'%-8s'|format(id)}} {{'%-15s'|format(username)}} {{'%-30s'|format(email)}} {{fullname}}
-

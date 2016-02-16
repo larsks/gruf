@@ -1,2 +1,1 @@
 {{'%-8s'|format(number)}} {{'%-3s'|format(currentPatchSet.number)}} {{'%-8s'|format(owner.username)}} {{subject}}
-

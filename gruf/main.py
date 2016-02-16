@@ -53,8 +53,9 @@ def parse_args():
     p.add_argument('--remote', '-r')
     p.add_argument('--config', '-f',
             default=os.path.join(CONFIG_DIR, 'gruf.yml'))
-    p.add_argument('-t', '--template')
-    p.add_argument('--template-dir', '-T')
+    p.add_argument('--template', '-t')
+    p.add_argument('--inline-template', '-T')
+    p.add_argument('--template-dir')
     p.add_argument('--yaml', '-y',
             action='store_true')
     p.add_argument('--json', '-j',
@@ -104,6 +105,9 @@ def main():
         res = g.raw(cmd, *cmdargs)
 
     env = jinja2.Environment(
+            trim_blocks=True,
+            lstrip_blocks=True,
+            keep_trailing_newline=True,
             loader = jinja2.FileSystemLoader([
                 args.template_dir,
                 pkg_resources.resource_filename(
@@ -119,21 +123,30 @@ def main():
             res.__class__.__name__,
             args.template or 'default')
 
-    try:
-        t = env.get_template(template_name)
-    except jinja2.TemplateNotFound:
-        t = env.get_template(args.template)
+    if args.inline_template:
+        t = env.from_string(args.inline_template)
+    else:
+        try:
+            t = env.get_template(template_name)
+        except jinja2.TemplateNotFound:
+            t = env.get_template(args.template)
 
     for item in res:
         try:
-            sys.stdout.write(
-                t.render(item=item, **item).encode('utf-8'))
+            out = t.render(item=item, **item).encode('utf-8')
         except TypeError:
             # we get here if item is not a mapping (which will
             # happen currently for UnstructuredResponse
             # results).
-            sys.stdout.write(
-                t.render(item=item).encode('utf-8'))
+            out = t.render(item=item).encode('utf-8')
+
+        sys.stdout.write(out)
+
+        # this is mostly to support inline templates, but I haven't found 
+        # a situation in which it causes a problem with file-based
+        # templates.
+        if not out.endswith('\n'):
+            sys.stdout.write('\n')
 
 if __name__ == '__main__':
     main()

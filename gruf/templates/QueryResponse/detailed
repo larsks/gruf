@@ -11,14 +11,15 @@ Subject: {{subject}}
 {{commitMessage}}
 
 Current patch set:
+Author: {{currentPatchSet.author.name}} ({{currentPatchSet.author.username}} <{{currentPatchSet.author.email}}>
+Ref: {{currentPatchSet.ref}}
 
-|
-| Author: {{currentPatchSet.author.name}} ({{currentPatchSet.author.username}} <{{currentPatchSet.author.email}}>
-| Ref: {{currentPatchSet.ref}}
-| {% for approval in currentPatchSet.approvals %}
+{% for approval in currentPatchSet.approvals %}
 | Approved-by: {{approval.by.name}} {{approval.type}} {{approval.value}}
 | Changes: +{{currentPatchSet.sizeInsertions}}/{{currentPatchSet.sizeDeletions}}
 | Created: {{currentPatchSet.createdOn|strftime('%Y-%m-%d %H:%M:%S')}}
-| {% endfor %}
+{% if not loop.last %}
+|
+{% endif %}
+{% endfor %}
 ======================================================================
-
