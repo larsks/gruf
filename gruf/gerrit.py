@@ -123,15 +123,18 @@ class Gerrit(object):
         return p
 
     def query_alias(self, k):
-        return self.querymap.get(k, k).format(**self.remote)
+        return shlex.split(self.querymap.get(k, k).format(**self.remote))
 
     def xform_query_args(self, args):
-        return [
+        # this slightly funky looking use of sum() here is to flatten 
+        # the result of the list comprehension, which is a list of
+        # of lists explicitly to support expansions from query_alias
+        return sum([
                 self.query_alias(arg) if arg in self.querymap
-                else rev_parse(arg[4:]) if arg.startswith('git:')
-                else arg
+                else [rev_parse(arg[4:])] if arg.startswith('git:')
+                else [arg]
                 for arg in args
-                ]
+                ], [])
 
     @model(QueryResponse)
     def query(self, *args, **kwargs):
