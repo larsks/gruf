@@ -47,8 +47,8 @@ without the class prefix.  For example, if you run:
 
     gruf -t yaml query open here
 
-Gruf will first attempt to load the template `QueryResponse/yaml`, and
-if that fails it will look for `yaml`.
+Gruf will first attempt to load the template `QueryResponse/yaml.j2`, and
+if that fails it will look for `yaml.j2`.
 
 ## Examples
 

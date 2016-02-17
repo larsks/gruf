@@ -124,17 +124,17 @@ def main():
     env.filters['to_yaml'] = gruf.filters.to_yaml
     env.filters['strftime'] = gruf.filters.strftime
 
-    template_name='{}/{}'.format(
-            res.__class__.__name__,
-            args.template or 'default')
+    template_name = args.template or 'default'
+    template_name_qualified = '{}/{}'.format(
+            res.__class__.__name__, template_name)
 
     if args.inline_template:
         t = env.from_string(args.inline_template)
     else:
         try:
-            t = env.get_template(template_name)
+            t = env.get_template(template_name_qualified + '.j2')
         except jinja2.TemplateNotFound:
-            t = env.get_template(args.template)
+            t = env.get_template(template_name + '.j2')
 
     for item in res:
         try:
