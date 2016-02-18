@@ -150,7 +150,7 @@ def main():
         # this is mostly to support inline templates, but I haven't found 
         # a situation in which it causes a problem with file-based
         # templates.
-        if not out.endswith('\n'):
+        if args.inline_template and not out.endswith('\n'):
             sys.stdout.write('\n')
 
 if __name__ == '__main__':
