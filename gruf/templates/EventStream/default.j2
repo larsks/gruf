@@ -1,7 +1,5 @@
-{% set red="[31m" %}
-{% set green="[32m" %}
-{% set yellow="[33m" %}
-{% set alloff="[0m" %}
+{% import "colors.j2" as colors %}
+{% import "events.j2" as events %}
 {% macro person(spec) %}
 {{spec.name}} ({{spec.username}}){% if spec.email is defined %} <{{spec.email}}>{% endif %}
 {% endmacro %}
@@ -12,21 +10,28 @@
 {% set patchset=item.patchSet %}
 {% endif %}
 {% if item.type == 'change-merged' %}
-[{{green}}MERGED{{alloff}}  ] {{change.number}},{{patchset.number}} {{change.project}}
+[{{colors.green}}MERGED{{colors.alloff}}    ] {{change.number}},{{patchset.number}} {{change.project}}
            URL: {{change.url}}
-           Owner: {{person(change.owner)}}
+           Author: {{person(patchset.author)}}
+	   Topic: {{change.topic}}
+           Subject: {{change.subject}}
+
+{% elif item.type == 'change-abandoned' %}
+[{{colors.red}}ABANDONED{{colors.alloff}} ] {{change.number}},{{patchset.number}} {{change.project}}
+           URL: {{change.url}}
+	   Author: {{person(patchset.author)}}
 	   Topic: {{change.topic}}
            Subject: {{change.subject}}
 
 {% elif item.type == 'patchset-created' %}
-[{{red}}PATCH{{alloff}}   ] {{change.number}},{{patchset.number}} {{change.project}}
+[{{colors.cyan}}PATCH{{colors.alloff}}     ] {{change.number}},{{patchset.number}} {{change.project}}
            URL: {{change.url}}
-	   Owner: {{person(change.owner)}}
+	   Author: {{person(patchset.author)}}
 	   Topic: {{change.topic}}
            Subject: {{change.subject}}
 
 {% elif item.type == 'comment-added' %}
-[{{yellow}}COMMENT{{alloff}} ] {{change.number}},{{patchset.number}} {{change.project}}
+[{{colors.yellow}}COMMENT{{colors.alloff}}   ] {{change.number}},{{patchset.number}} {{change.project}}
            URL: {{change.url}}
 	   Author: {{person(item.author)}}
 	   Topic: {{change.topic}}
@@ -34,6 +39,6 @@
 
 {{item.comment|wordwrap(70, break_long_words=False)|indent(4, indentfirst=True)}}
 
-{% elif item.type in ['ref-updated', 'reviewer-added', 'ref-replicated', 'ref-replication-done'] %}{% else %}
-{{ item.type }} ...
+{% elif item.type in events.ignored %}{% else %}
+[ UNKNOWN   ] {{ item.type }} ...
 {% endif %}
