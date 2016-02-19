@@ -1,21 +1,27 @@
 from __future__ import absolute_import
 
+import functools
+import hashlib
 import json
 import logging
 import os
 import shlex
 import subprocess
 import sys
+import time
 import urlparse
 import yaml
-import functools
 
 from gruf.exc import *  # NOQA
 from gruf.models import *  # NOQA
-from gruf.git import get_remote_info, rev_parse
+from . import git
+from . import cache
 
 LOG = logging.getLogger(__name__)
-GERRIT_PORT = 29418
+
+DEFAULT_REMOTE = 'gerrit'
+DEFAULT_GERRIT_PORT = 29418
+DEFAULT_CACHE_LIFETIME = 300  # 5 minutes
 
 def parse_gerrit_remote(url):
     if not url.startswith('ssh://'):
@@ -45,24 +51,11 @@ def parse_gerrit_remote(url):
             'url': url,
             }
 
-def stdout_reader(p):
-    while True:
-        line = p.stdout.readline().decode('utf-8')
-        LOG.debug('line %s', line)
-        if not line:
-            break
-
-        yield line.strip()
-
-    p.wait()
-    if p.returncode != 0:
-        raise GerritCommandError(p.stderr.read())
-
 def model(obj):
     def outside(func):
         def inside(*args, **kwargs):
             p = func(*args, **kwargs)
-            return obj(stdout_reader(p))
+            return obj(p)
 
         return inside
     return outside
@@ -79,24 +72,29 @@ class Gerrit(object):
             'open': 'status:open',
             }
 
-    def __init__(self, remote=None, querymap=None):
-        remote = remote if remote is not None else 'gerrit'
+    reconnect_interval = 5
+
+    def __init__(self,
+            remote=None,
+            querymap=None,
+            cache_lifetime=None):
+
+        remote = remote or DEFAULT_REMOTE
+        cache_lifetime = cache_lifetime or DEFAULT_CACHE_LIFETIME
+
+        self.cache = cache.Cache(__name__, lifetime=cache_lifetime)
 
         self.remote = dict(zip(
             ('user', 'host', 'port', 'project'),
-            get_remote_info(remote)))
+            git.get_remote_info(remote)))
         self.querymap = self.default_querymap
         if querymap is not None:
             self.querymap.update(querymap)
 
-    def ssh(self, *args, **kwargs):
-        # quote any arguments containing spaces.
-        args = ['"{}"'.format(arg) if ' ' in arg else arg
-                for arg in args]
+    def _ssh(self, args):
+        '''Run the given command on the gerrit server, and
+        return the subprocess.Popen object for the ssh connection.'''
 
-        LOG.debug('running %s', args)
-
-        port = self.remote.get('port', GERRIT_PORT)
         cmdvec = [
             'ssh',
             '-n',
@@ -105,7 +103,7 @@ class Gerrit(object):
             '-o', 'BatchMode=yes',
             '-o', 'ForwardAgent=no',
             '-o', 'ForwardX11=no',
-            '-p', '{}'.format(port),
+            '-p', '{port}'.format(**self.remote),
             ]
 
         if self.remote.get('user'):
@@ -122,7 +120,81 @@ class Gerrit(object):
 
         return p
 
+    def ssh(self, *args, **kwargs):
+        '''Ensure properly quoted arguments and then hand off command
+        to the apppropriate connection handler depending on whether or
+        not we need streaming support.
+        
+        Returns an iterator that iterates over lines returned by the
+        server.'''
+
+        streaming = kwargs.get('streaming')
+
+        args = ['"{}"'.format(arg) if ' ' in arg else arg
+                for arg in args]
+        LOG.debug('gerrit %s', args)
+
+        if not streaming:
+            return self._return_cache(args)
+        else:
+            return self._return_stream(args)
+
+    def _return_cache(self, args):
+        '''return a cached value if available; otherwise fetch data
+        from the server, cache the result, and return an iterator to
+        the caller.'''
+
+        # build a cache key from the arguments *and* our connection
+        # credentials (because different users may get different
+        # results).
+        cachekey = hashlib.sha1('{user}:{host}:{port}'.format(**self.remote))
+        for arg in args:
+            cachekey.update(arg)
+
+        cachekey = cachekey.hexdigest()
+        LOG.debug('cache key %s', cachekey)
+
+        try:
+            res = self.cache.load_iter(cachekey)
+        except KeyError:
+            p = self._ssh(args)
+            content = p.stdout.read()
+            p.wait()
+
+            if p.returncode != 0:
+                raise GerritCommandError(p.stderr.read())
+
+            self.cache.store(cachekey, content)
+            res = self.cache.load_iter(cachekey)
+
+        return res
+
+    def _return_stream(self, args):
+        '''This is a generator function that iterates over the lines
+        returned by the server.  It will reconnect automatically if
+        the connection drops.'''
+
+        while True:
+            p = self._ssh(args)
+            while True:
+                line = p.stdout.readline()
+                if not line:
+                    break
+
+                yield line
+
+            p.wait()
+            if p.returncode == 0:
+                break
+
+            LOG.warn('lost connection (%d): %s',
+                    p.returncode, p.stderr.read())
+            time.sleep(self.reconnect_interval)
+
     def query_alias(self, k):
+        '''subsitute query terms with replacements from
+        self.querymap.'''
+
         return shlex.split(self.querymap.get(k, k).format(**self.remote))
 
     def xform_query_args(self, args):
@@ -131,7 +203,7 @@ class Gerrit(object):
         # of lists explicitly to support expansions from query_alias
         return sum([
                 self.query_alias(arg) if arg in self.querymap
-                else [rev_parse(arg[4:])] if arg.startswith('git:')
+                else [git.rev_parse(arg[4:])] if arg.startswith('git:')
                 else [arg]
                 for arg in args
                 ], [])
@@ -190,7 +262,7 @@ class Gerrit(object):
 
     @model(EventStream)
     def stream_events(self, *args):
-        return self.ssh('stream-events', *args)
+        return self.ssh('stream-events', *args, streaming=True)
 
     @model(UnstructuredResponse)
     def raw(self, *args):
