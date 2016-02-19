@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import functools
-import hashlib
 import json
 import logging
 import os
@@ -80,7 +79,9 @@ class Gerrit(object):
             cache_lifetime=None):
 
         remote = remote or DEFAULT_REMOTE
-        cache_lifetime = cache_lifetime or DEFAULT_CACHE_LIFETIME
+        cache_lifetime = (
+                cache_lifetime if cache_lifetime is not None 
+                else DEFAULT_CACHE_LIFETIME)
 
         self.cache = cache.Cache(__name__, lifetime=cache_lifetime)
 
@@ -147,11 +148,10 @@ class Gerrit(object):
         # build a cache key from the arguments *and* our connection
         # credentials (because different users may get different
         # results).
-        cachekey = hashlib.sha1('{user}:{host}:{port}'.format(**self.remote))
-        for arg in args:
-            cachekey.update(arg)
+        cachekey = (
+                '{user}:{host}:{port}'.format(**self.remote) + ':' +
+                ':'.join(args))
 
-        cachekey = cachekey.hexdigest()
         LOG.debug('cache key %s', cachekey)
 
         try:
@@ -165,7 +165,10 @@ class Gerrit(object):
                 raise GerritCommandError(p.stderr.read())
 
             self.cache.store(cachekey, content)
-            res = self.cache.load_iter(cachekey)
+
+            # we need to set noexpire=True here to avoid a KeyError
+            # if someone has set the cache lifetime to 0.
+            res = self.cache.load_iter(cachekey, noexpire=True)
 
         return res
 

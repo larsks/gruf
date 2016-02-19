@@ -56,10 +56,8 @@ def parse_args():
     p.add_argument('--template', '-t')
     p.add_argument('--inline-template', '-T')
     p.add_argument('--template-dir')
-    p.add_argument('--yaml', '-y',
-            action='store_true')
-    p.add_argument('--json', '-j',
-            action='store_true')
+    p.add_argument('--cache-lifetime', '-L',
+            type=int)
     p.add_argument('cmd', nargs=argparse.REMAINDER)
 
     return p.parse_args()
@@ -83,7 +81,8 @@ def main():
 
     g = gruf.gerrit.Gerrit(
             remote=args.remote,
-            querymap=config.get('querymap'))
+            querymap=config.get('querymap'),
+            cache_lifetime=args.cache_lifetime)
     LOG.debug('remote %s', g.remote)
 
     cmd = args.cmd.pop(0)
@@ -102,6 +101,11 @@ def main():
             args.template = alias['template']
         if 'inline_template' in alias:
             args.inline_template = alias['inline_template']
+
+    # handle some administrative commands here
+    if cmd == 'invalidate-cache':
+        g.cache.invalidate_all()
+        return
 
     cmd_func = cmd.replace('-', '_')
     try:
