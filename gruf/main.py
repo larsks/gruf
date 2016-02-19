@@ -76,10 +76,15 @@ def main():
     except IOError:
         config = {}
 
+    cache_lifetime = (
+            args.cache_lifetime 
+            if args.cache_lifetime is not None
+            else config.get('cache', {}).get('lifetime'))
+
     g = gruf.gerrit.Gerrit(
             remote=args.remote,
             querymap=config.get('querymap'),
-            cache_lifetime=args.cache_lifetime)
+            cache_lifetime=cache_lifetime)
     LOG.debug('remote %s', g.remote)
 
     cmd = args.cmd.pop(0)

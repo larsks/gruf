@@ -20,7 +20,6 @@ LOG = logging.getLogger(__name__)
 
 DEFAULT_REMOTE = 'gerrit'
 DEFAULT_GERRIT_PORT = 29418
-DEFAULT_CACHE_LIFETIME = 300  # 5 minutes
 
 def parse_gerrit_remote(url):
     if not url.startswith('ssh://'):
@@ -79,10 +78,6 @@ class Gerrit(object):
             cache_lifetime=None):
 
         remote = remote or DEFAULT_REMOTE
-        cache_lifetime = (
-                cache_lifetime if cache_lifetime is not None 
-                else DEFAULT_CACHE_LIFETIME)
-
         self.cache = cache.Cache(__name__, lifetime=cache_lifetime)
 
         self.remote = dict(zip(

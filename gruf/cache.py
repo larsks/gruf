@@ -8,7 +8,7 @@ LOG = logging.getLogger(__name__)
 
 DEFAULT_CACHE_DIR = os.environ.get('GRUF_CACHE_DIR',
         os.path.join(os.environ.get('HOME', ''), '.cache', 'gruf-cache'))
-DEFAULT_CACHE_LIFETIME = 600
+DEFAULT_CACHE_LIFETIME = 300
 
 def line_iterator(fd):
     with contextlib.closing(fd) as fd:
