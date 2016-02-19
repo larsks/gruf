@@ -149,7 +149,9 @@ def main():
             t = env.get_template(template_name + '.j2')
 
     for item in res:
-        if args.filter and jsonpointer.resolve_pointer(item, filter_expr) != filter_val:
+        if args.filter and (
+                jsonpointer.resolve_pointer(item, filter_expr, None)
+                != filter_val):
             continue
 
         try:
