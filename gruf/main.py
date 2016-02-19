@@ -1,16 +1,13 @@
 #!/usr/bin/python
 
 import argparse
-import json
 import logging
 import os
 import shlex
-import subprocess
 import sys
 import urlparse
 import yaml
 import jinja2
-from prettytable import PrettyTable
 
 import pkg_resources
 
