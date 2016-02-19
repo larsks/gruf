@@ -8,6 +8,7 @@ import sys
 import urlparse
 import yaml
 import jinja2
+import jsonpointer
 
 import pkg_resources
 
@@ -55,6 +56,7 @@ def parse_args():
     p.add_argument('--template-dir')
     p.add_argument('--cache-lifetime', '-L',
             type=int)
+    p.add_argument('--filter', '-F')
     p.add_argument('cmd', nargs=argparse.REMAINDER)
 
     return p.parse_args()
@@ -86,6 +88,10 @@ def main():
             querymap=config.get('querymap'),
             cache_lifetime=cache_lifetime)
     LOG.debug('remote %s', g.remote)
+
+    if args.filter:
+        filter_expr, filter_val = args.filter.split('=')
+        LOG.debug('filter %s = "%s"', filter_expr, filter_val)
 
     cmd = args.cmd.pop(0)
     cmdargs = args.cmd
@@ -143,6 +149,9 @@ def main():
             t = env.get_template(template_name + '.j2')
 
     for item in res:
+        if args.filter and jsonpointer.resolve_pointer(item, filter_expr) != filter_val:
+            continue
+
         try:
             out = t.render(item=item, **item).encode('utf-8')
         except TypeError:
