@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os
 import time
+import pathlib
 
 LOG = logging.getLogger(__name__)
 
@@ -17,20 +18,41 @@ def line_iterator(fd):
 
 class Cache (object):
     def __init__(self, appid, cachedir=None, lifetime=None):
-        self.cachedir = cachedir or DEFAULT_CACHE_DIR
+        # sanitize the appid
+        appid = appid.replace('/', '_')
+
+        self.cachedir = pathlib.Path(cachedir or DEFAULT_CACHE_DIR)
+        self.appid = appid
         self.lifetime = (
                 lifetime if lifetime is not None
                 else DEFAULT_CACHE_LIFETIME)
-        self.mydir = os.path.join(self.cachedir, appid)
+
+        self.create_cache_dirs()
 
         LOG.debug('initialized cache with lifetime = %d',
                 self.lifetime)
 
-        if not os.path.isdir(self.cachedir):
-            os.mkdir(self.cachedir, 0700)
+    def get_app_cache(self):
+        return pathlib.Path(self.cachedir, self.appid)
 
-        if not os.path.isdir(self.mydir):
-            os.mkdir(self.mydir, 0700)
+    def path(self, key):
+        return pathlib.Path(
+                self.get_app_cache(),
+                key[:2],
+                key)
+
+    def create_cache_dirs(self):
+        if not self.cachedir.is_dir():
+           self.cachedir.mkdir(mode=0700)
+
+        appcache = self.get_app_cache()
+        if not appcache.is_dir():
+            appcache.mkdir(mode=0700)
+
+        for prefix in range(256):
+            prefixdir = pathlib.Path(appcache, '{:02x}'.format(prefix))
+            if not prefixdir.is_dir():
+                prefixdir.mkdir(mode=0700)
 
     def xform_key(self, key):
         '''we transform cache keys by taking their sha1 hash so that
@@ -42,10 +64,10 @@ class Cache (object):
 
     def invalidate(self, key):
         '''Clear an item from the cache'''
-        path = os.path.join(self.mydir, self.xform_key(key))
+        path = self.path(self.xform_key(key))
         try:
             LOG.debug('invalidate %s (%s)', key, path)
-            os.unlink(path)
+            path.unlink()
         except OSError:
             pass
 
@@ -53,16 +75,26 @@ class Cache (object):
         '''Clear all items from the cache'''
 
         LOG.debug('clearing cache')
-        for dirpath, dirnames, filenames in os.walk(self.mydir):
+        appcache = str(self.get_app_cache())
+        for dirpath, dirnames, filenames in os.walk(appcache):
             for name in filenames:
                 try:
-                    os.unlink(os.path.join(dirpath, name))
+                    pathlib.Path(dirpath, name).unlink()
                 except OSError:
                     pass
 
     def store(self, key, content):
-        path = os.path.join(self.mydir, self.xform_key(key))
-        with open(path, 'w') as fd:
+        path = self.path(self.xform_key(key))
+
+        # ensure parent directories exist
+        for prefix in path.parents:
+            if prefix == self.cachedir:
+                break
+
+            if not prefix.is_dir():
+                prefix.mkdir(parents=True)
+
+        with path.open('wb') as fd:
             fd.write(content)
         LOG.debug('%s stored in cache', key)
 
@@ -71,15 +103,15 @@ class Cache (object):
         descriptor for the object.  It is the caller's responsibility
         to close the file descriptor.'''
 
-        path = os.path.join(self.mydir, self.xform_key(key))
+        path = self.path(self.xform_key(key))
         try:
-            stat = os.stat(path)
+            stat = path.stat()
             if not noexpire and stat.st_mtime < time.time() - self.lifetime:
-                os.unlink(path)
+                path.unlink()
                 raise KeyError(key)
 
             LOG.debug('%s found in cache', key)
-            return open(path)
+            return path.open('rb')
         except OSError:
             LOG.debug('%s not found in cache', key)
             raise KeyError(key)
