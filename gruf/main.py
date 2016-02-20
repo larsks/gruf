@@ -9,6 +9,7 @@ import urlparse
 import yaml
 import jinja2
 import jsonpointer
+import fnmatch
 
 import pkg_resources
 
@@ -149,10 +150,16 @@ def main():
             t = env.get_template(template_name + '.j2')
 
     for item in res:
-        if args.filter and (
-                jsonpointer.resolve_pointer(item, filter_expr, None)
-                != filter_val):
-            continue
+        if args.filter:
+            val = jsonpointer.resolve_pointer(item, filter_expr, None)
+            if val is None:
+                LOG.debug('filter failed: could not match %s', filter_expr)
+                continue
+
+            if not fnmatch.fnmatch(val, filter_val):
+                LOG.debug('filter failed: expected %s, got %s',
+                        filter_val, val)
+                continue
 
         try:
             out = t.render(item=item, **item).encode('utf-8')

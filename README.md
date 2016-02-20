@@ -80,6 +80,56 @@ if that fails it will look for `yaml.j2`.
 
         $ gruf show open here
 
+## Streaming
+
+Gruf supports the Gerrit `stream-events` command.  The default
+template produces several lines of output for each event; for more
+compact output try:
+
+    gruf -t short stream-events
+
+The output will look something like:
+
+<pre>
+[<span style="color:#00f0f0;">PATCH</span>     ] 240944,24 openstack/python-ironicclient sturivnyi <span style="color:#0000f0;">https://review.openstack.org/240944</span>
+             Add sanity tests for testing actions with Port
+[<span style="color:#f0f000;">COMMENT</span>   ] 282334,1 openstack/fuel-octane gelbuhos <span style="color:#0000f0;">https://review.openstack.org/282334</span>
+             Workflow 1 Code-Review 2 
+[<span style="color:#f0f000;">COMMENT</span>   ] 282334,1 openstack/fuel-octane gelbuhos <span style="color:#0000f0;">https://review.openstack.org/282334</span>
+[<span style="color:#f0f000;">COMMENT</span>   ] 275844,23 openstack/kolla elemoine <span style="color:#0000f0;">https://review.openstack.org/275844</span>
+             Workflow 1 Code-Review 2 
+[<span style="color:#f0f000;">COMMENT</span>   ] 279478,3 openstack/fuel-octane gelbuhos <span style="color:#0000f0;">https://review.openstack.org/279478</span>
+             Verified 2 
+[<span style="color:#00f000;">MERGED</span>    ] 279478,3 openstack/fuel-octane gelbuhos <span style="color:#0000f0;">https://review.openstack.org/279478</span>
+[<span style="color:#f0f000;">COMMENT</span>   ] 248938,29 openstack/neutron slaweq <span style="color:#0000f0;">https://review.openstack.org/248938</span>
+[<span style="color:#f0f000;">COMMENT</span>   ] 279478,3 openstack/fuel-octane gelbuhos <span style="color:#0000f0;">https://review.openstack.org/279478</span>
+[<span style="color:#f0f000;">COMMENT</span>   ] 279478,3 openstack/fuel-octane gelbuhos <span style="color:#0000f0;">https://review.openstack.org/279478</span>
+[<span style="color:#f0f000;">COMMENT</span>   ] 276419,1 openstack/glance siuzannatb <span style="color:#0000f0;">https://review.openstack.org/276419</span>
+             Workflow 1 Code-Review 2 
+[<span style="color:#f0f000;">COMMENT</span>   ] 276814,18 openstack/fuel-web vkramskikh <span style="color:#0000f0;">https://review.openstack.org/276814</span>
+             Verified 1 
+[<span style="color:#f0f000;">COMMENT</span>   ] 276419,1 openstack/glance siuzannatb <span style="color:#0000f0;">https://review.openstack.org/276419</span>
+[<span style="color:#f0f000;">COMMENT</span>   ] 281472,2 openstack/ironic-webclient krotscheck <span style="color:#0000f0;">https://review.openstack.org/281472</span>
+             Verified 1 
+[<span style="color:#f0f000;">COMMENT</span>   ] 282331,1 openstack/fuel-qa apanchenko <span style="color:#0000f0;">https://review.openstack.org/282331</span>
+</pre>
+
+## Filtering
+
+You can filter the items returned from Gerrit by passing a
+[jsonpointer][] expression and expected value to the `--filter` (`-F`)
+option.  For example, to stream only events from the `openstack/nova`
+project:
+
+    gruf -F /change/project=openstack/nova stream-events
+
+The expected values can use simple [fnmatch][] style wildcards:
+
+    gruf -F /change/project=redhat-openstack/* stream-events
+
+[jsonpointer]: https://tools.ietf.org/html/rfc6901
+[fnmatch]: https://docs.python.org/2/library/fnmatch.html
+
 ## License
 
 GRUF, a gerrit command-line wrapper
