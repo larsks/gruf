@@ -11,10 +11,11 @@ import time
 import urlparse
 import yaml
 
+from thecache.cache import Cache
+
 from gruf.exc import *  # NOQA
 from gruf.models import *  # NOQA
 from . import git
-from . import cache
 
 LOG = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class Gerrit(object):
             cache_lifetime=None):
 
         remote = remote or DEFAULT_REMOTE
-        self.cache = cache.Cache(__name__, lifetime=cache_lifetime)
+        self.cache = Cache(__name__, lifetime=cache_lifetime)
 
         self.remote = dict(zip(
             ('user', 'host', 'port', 'project'),
@@ -150,7 +151,7 @@ class Gerrit(object):
         LOG.debug('cache key %s', cachekey)
 
         try:
-            res = self.cache.load_iter(cachekey)
+            res = self.cache.load_lines(cachekey)
         except KeyError:
             p = self._ssh(args)
             content = p.stdout.read()
@@ -163,7 +164,7 @@ class Gerrit(object):
 
             # we need to set noexpire=True here to avoid a KeyError
             # if someone has set the cache lifetime to 0.
-            res = self.cache.load_iter(cachekey, noexpire=True)
+            res = self.cache.load_lines(cachekey, noexpire=True)
 
         return res
 
