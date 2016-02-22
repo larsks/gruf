@@ -15,16 +15,16 @@ patchset.author.username}} {{colors.blue}}{{change.url}}{{colors.alloff}}{% endm
 {% if item.type == 'change-merged' %}
 [{{colors.green}}MERGED{{colors.alloff}}    ] {{header(change, patchset)}}
 {% elif item.type == 'patchset-created' %}
-[{{colors.cyan}}PATCH{{colors.alloff}}     ] {{header(change, patchset)}}
+{{_time|strftime('%H:%M:%S')}} [{{colors.cyan}}PATCH{{colors.alloff}}     ] {{header(change, patchset)}}
              {{change.subject}}
 {% elif item.type == 'comment-added' %}
-[{{colors.yellow}}COMMENT{{colors.alloff}}   ] {{header(change,patchset)}}
+{{_time|strftime('%H:%M:%S')}} [{{colors.yellow}}COMMENT{{colors.alloff}}   ] {{header(change,patchset)}}
 {% if item.approvals %}
              {%+ for approval in item.approvals %}{{approval.type}} {{approval.value}} {% endfor %}
 
 {% endif %}
 {% elif item.type == 'change-abandoned' %}
-[{{colors.red}}ABANDONED{{colors.alloff}} ] {{header(change,patchset)}}
+{{_time|strftime('%H:%M:%S')}} [{{colors.red}}ABANDONED{{colors.alloff}} ] {{header(change,patchset)}}
 {% elif item.type in events.ignored %}{% else %}
-[ UNKNOWN   ] {{ item.type }} ...
+{{_time|strftime('%H:%M:%S')}} [ UNKNOWN  ] {{ item.type }} ...
 {% endif %}
