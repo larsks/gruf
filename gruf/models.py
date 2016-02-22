@@ -1,5 +1,6 @@
 import json
 
+
 class Model (object):
     streaming = False
 
@@ -7,12 +8,14 @@ class Model (object):
         self.stdout = stdout
         self.decode_response()
 
+
 class Approval(dict):
     def __str__(self):
         try:
-            return '<{type} for {patch[ref]} by {by[username]} {description} {value}>'.format(**self)
+            return '<{type} for {patch[ref]} by {by[username]} {description} {value}>'.format(**self)  # NOQA
         except KeyError:
-            return '<{type} for {patch[ref]} by {by[username]}>'.format(**self)
+            return '<{type} for {patch[ref]} by {by[username]}>'.format(**self)  # NOQA
+
 
 class Patch(dict):
     def __iter__(self):
@@ -25,6 +28,7 @@ class Patch(dict):
 
     def __str__(self):
         return '<Patch {ref}>'.format(**self)
+
 
 class Change(dict):
     def __init__(self, **kwargs):
@@ -41,6 +45,7 @@ class Change(dict):
     def __str__(self):
         return '<Change {number}>'.format(**self)
 
+
 class QueryResponse (Model):
     def __iter__(self):
         return iter(self.changes)
@@ -50,12 +55,14 @@ class QueryResponse (Model):
             json.loads(line) for line in self.stdout)
             if line.get('type') != 'stats']
 
+
 class ProjectListResponse (Model):
     def __iter__(self):
-        return (dict(name=k, **v) for k,v in self.projects.items())
+        return (dict(name=k, **v) for k, v in self.projects.items())
 
     def decode_response(self):
         self.projects = json.loads('\n'.join(line for line in self.stdout))
+
 
 class UnstructuredResponse (Model):
     def __iter__(self):
@@ -67,6 +74,7 @@ class UnstructuredResponse (Model):
     def __str__(self):
         return '\n'.join(self.response)
 
+
 class MemberListResponse (Model):
     fields = ('id', 'username', 'fullname', 'email')
 
@@ -75,20 +83,22 @@ class MemberListResponse (Model):
 
     def decode_response(self):
         self.members = [
-                dict(zip(self.fields, line.split('\t')))
-                for line in self.stdout]
+            dict(zip(self.fields, line.split('\t')))
+            for line in self.stdout]
+
 
 class GroupListResponse (Model):
     fields = ('name', 'uuid', 'description', 'owner_name',
-            'owner_uuid', 'public')
+              'owner_uuid', 'public')
 
     def __iter__(self):
         return iter(self.groups)
 
     def decode_response(self):
         self.groups = [
-                dict(zip(self.fields, line.split('\t')))
-                for line in self.stdout]
+            dict(zip(self.fields, line.split('\t')))
+            for line in self.stdout]
+
 
 class EventStream (Model):
     streaming = True

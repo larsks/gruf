@@ -9,7 +9,6 @@ import os
 import shlex
 import sys
 import time
-import urlparse
 import yaml
 
 import pkg_resources
@@ -22,23 +21,24 @@ import gruf.filters
 LOG = logging.getLogger(__name__)
 
 CONFIG_DIR = os.path.join(
-        os.environ.get('XDG_CONFIG_DIR',
-            os.path.join(os.environ['HOME'], '.config')),
-        'gruf')
+    os.environ.get('XDG_CONFIG_DIR',
+                   os.path.join(os.environ['HOME'], '.config')),
+    'gruf')
 
 CMDALIAS = {
-        'confirm': {'cmd': 'review --code-review 2 --verified 1'},
-        'submit': {'cmd': 'review --submit'},
-        'abandon': {'cmd': 'review --abandon'},
-        'url-for': {
-            'cmd': 'query',
-            'template': 'url',
-            },
-        'show': {
-            'cmd': 'query',
-            'template': 'detailed',
-            }
-        }
+    'confirm': {'cmd': 'review --code-review 2 --verified 1'},
+    'submit': {'cmd': 'review --submit'},
+    'abandon': {'cmd': 'review --abandon'},
+    'url-for': {
+        'cmd': 'query',
+        'template': 'url',
+    },
+    'show': {
+        'cmd': 'query',
+        'template': 'detailed',
+    }
+}
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -52,22 +52,23 @@ def parse_args():
                    dest='loglevel')
     p.add_argument('--remote', '-r')
     p.add_argument('--config', '-f',
-            default=os.path.join(CONFIG_DIR, 'gruf.yml'))
+                   default=os.path.join(CONFIG_DIR, 'gruf.yml'))
     p.add_argument('--template', '-t')
     p.add_argument('--inline-template', '-T')
     p.add_argument('--template-dir')
     p.add_argument('--cache-lifetime', '-L',
-            type=int)
+                   type=int)
     p.add_argument('--filter', '-F')
     p.add_argument('cmd', nargs=argparse.REMAINDER)
 
     return p.parse_args()
 
+
 def main():
     args = parse_args()
     if args.template_dir is None:
         args.template_dir = os.path.join(
-                os.path.dirname(args.config), 'templates')
+            os.path.dirname(args.config), 'templates')
 
     logging.basicConfig(
         level=args.loglevel)
@@ -81,14 +82,14 @@ def main():
         config = {}
 
     cache_lifetime = (
-            args.cache_lifetime 
-            if args.cache_lifetime is not None
-            else config.get('cache', {}).get('lifetime'))
+        args.cache_lifetime
+        if args.cache_lifetime is not None
+        else config.get('cache', {}).get('lifetime'))
 
     g = gruf.gerrit.Gerrit(
-            remote=args.remote,
-            querymap=config.get('querymap'),
-            cache_lifetime=cache_lifetime)
+        remote=args.remote,
+        querymap=config.get('querymap'),
+        cache_lifetime=cache_lifetime)
     LOG.debug('remote %s', g.remote)
 
     if args.filter:
@@ -124,15 +125,15 @@ def main():
         res = g.raw(cmd, *cmdargs)
 
     env = jinja2.Environment(
-            trim_blocks=True,
-            lstrip_blocks=True,
-            keep_trailing_newline=True,
-            loader = jinja2.FileSystemLoader([
-                args.template_dir,
-                pkg_resources.resource_filename(
-                    __name__,
-                    'templates'),
-                ]))
+        trim_blocks=True,
+        lstrip_blocks=True,
+        keep_trailing_newline=True,
+        loader=jinja2.FileSystemLoader([
+            args.template_dir,
+            pkg_resources.resource_filename(
+                __name__,
+                'templates'),
+        ]))
 
     env.filters['to_json'] = gruf.filters.to_json
     env.filters['to_yaml'] = gruf.filters.to_yaml
@@ -140,7 +141,7 @@ def main():
 
     template_name = args.template or 'default'
     template_name_qualified = '{}/{}'.format(
-            res.__class__.__name__, template_name)
+        res.__class__.__name__, template_name)
 
     if args.inline_template:
         t = env.from_string(args.inline_template)
@@ -159,15 +160,15 @@ def main():
 
             if not fnmatch.fnmatch(val, filter_val):
                 LOG.debug('filter failed: expected %s, got %s',
-                        filter_val, val)
+                          filter_val, val)
                 continue
 
         params = {
-                'item': item,
-                '_tty': sys.stdout.isatty(),
-                '_time': time.time(),
-                '_gerrit': g,
-                }
+            'item': item,
+            '_tty': sys.stdout.isatty(),
+            '_time': time.time(),
+            '_gerrit': g,
+        }
 
         try:
             params.update(item)
