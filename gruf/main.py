@@ -1,15 +1,16 @@
 #!/usr/bin/python
 
 import argparse
+import fnmatch
+import jinja2
+import jsonpointer
 import logging
 import os
 import shlex
 import sys
+import time
 import urlparse
 import yaml
-import jinja2
-import jsonpointer
-import fnmatch
 
 import pkg_resources
 
@@ -161,17 +162,22 @@ def main():
                         filter_val, val)
                 continue
 
-        try:
-            out = t.render(item=item, **item).encode('utf-8')
-        except TypeError:
-            # we get here if item is not a mapping (which will
-            # happen currently for UnstructuredResponse
-            # results).
-            out = t.render(item=item).encode('utf-8')
+        params = {
+                'item': item,
+                '_tty': sys.stdout.isatty(),
+                '_time': time.time(),
+                '_gerrit': g,
+                }
 
+        try:
+            params.update(item)
+        except ValueError:
+            pass
+
+        out = t.render(**params).encode('utf-8')
         sys.stdout.write(out)
 
-        # this is mostly to support inline templates, but I haven't found 
+        # this is mostly to support inline templates, but I haven't found
         # a situation in which it causes a problem with file-based
         # templates.
         if args.inline_template and not out.endswith('\n'):
