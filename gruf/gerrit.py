@@ -1,15 +1,10 @@
 from __future__ import absolute_import
 
-import functools
-import json
 import logging
-import os
 import shlex
 import subprocess
-import sys
 import time
 import urlparse
-import yaml
 
 from gruf.exc import *  # NOQA
 from gruf.models import *  # NOQA
@@ -20,6 +15,7 @@ LOG = logging.getLogger(__name__)
 
 DEFAULT_REMOTE = 'gerrit'
 DEFAULT_GERRIT_PORT = 29418
+
 
 def parse_gerrit_remote(url):
     if not url.startswith('ssh://'):
@@ -49,6 +45,7 @@ def parse_gerrit_remote(url):
             'url': url,
             }
 
+
 def model(obj):
     def outside(func):
         def inside(*args, **kwargs):
@@ -58,6 +55,7 @@ def model(obj):
         return inside
     return outside
 
+
 class Gerrit(object):
     json_iterator_result = ('query',)
     json_result = ('ls-projects',)
@@ -65,17 +63,17 @@ class Gerrit(object):
     unimplemented = ('stream-events',)
 
     default_querymap = {
-            'mine': 'owner:self',
-            'here': 'project:{project}',
-            'open': 'status:open',
-            }
+        'mine': 'owner:self',
+        'here': 'project:{project}',
+        'open': 'status:open',
+    }
 
     reconnect_interval = 5
 
     def __init__(self,
-            remote=None,
-            querymap=None,
-            cache_lifetime=None):
+                 remote=None,
+                 querymap=None,
+                 cache_lifetime=None):
 
         remote = remote or DEFAULT_REMOTE
         self.cache = cache.Cache(__name__, lifetime=cache_lifetime)
@@ -111,8 +109,8 @@ class Gerrit(object):
         cmdvec.extend(args)
 
         p = subprocess.Popen(cmdvec,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
 
         return p
 
@@ -120,7 +118,7 @@ class Gerrit(object):
         '''Ensure properly quoted arguments and then hand off command
         to the apppropriate connection handler depending on whether or
         not we need streaming support.
-        
+
         Returns an iterator that iterates over lines returned by the
         server.'''
 
@@ -144,8 +142,8 @@ class Gerrit(object):
         # credentials (because different users may get different
         # results).
         cachekey = (
-                '{user}:{host}:{port}'.format(**self.remote) + ':' +
-                ':'.join(args))
+            '{user}:{host}:{port}'.format(**self.remote) + ':' +
+            ':'.join(args))
 
         LOG.debug('cache key %s', cachekey)
 
@@ -186,7 +184,7 @@ class Gerrit(object):
                 break
 
             LOG.warn('lost connection (%d): %s',
-                    p.returncode, p.stderr.read())
+                     p.returncode, p.stderr.read())
             time.sleep(self.reconnect_interval)
 
     def query_alias(self, k):
@@ -196,21 +194,21 @@ class Gerrit(object):
         return shlex.split(self.querymap.get(k, k).format(**self.remote))
 
     def xform_query_args(self, args):
-        # this slightly funky looking use of sum() here is to flatten 
+        # this slightly funky looking use of sum() here is to flatten
         # the result of the list comprehension, which is a list of
         # of lists explicitly to support expansions from query_alias
         return sum([
-                self.query_alias(arg) if arg in self.querymap
-                else [git.rev_parse(arg[4:])] if arg.startswith('git:')
-                else [arg]
-                for arg in args
-                ], [])
+            self.query_alias(arg) if arg in self.querymap
+            else [git.rev_parse(arg[4:])] if arg.startswith('git:')
+            else [arg]
+            for arg in args
+        ], [])
 
     @model(QueryResponse)
     def query(self, *args, **kwargs):
         # transform any keyword arguments in
         # k:v strings, useful in queries.
-        args = args + tuple('{}:{}'.format(k,v) for k,v in kwargs.items())
+        args = args + tuple('{}:{}'.format(k, v) for k, v in kwargs.items())
 
         args = self.xform_query_args(args)
         return self.ssh(*[

@@ -1,6 +1,7 @@
 import subprocess
 import urlparse
 
+
 def get_git_config(key):
     '''Read a git configuration value use "git config --get ..."'''
     val = subprocess.check_output([
@@ -8,12 +9,14 @@ def get_git_config(key):
 
     return val
 
+
 def rev_parse(rev):
     '''Read a git configuration value use "git config --get ..."'''
     val = subprocess.check_output([
         'git', 'rev-parse', '--verify', rev]).strip()
 
     return val
+
 
 def get_remote_info(remote):
     url = get_git_config('remote.%s.url' % remote)
@@ -27,7 +30,7 @@ def get_remote_info(remote):
         return
 
     url = urlparse.urlparse(url)
-    
+
     try:
         userhost, port = url.netloc.split(':')
     except ValueError:
