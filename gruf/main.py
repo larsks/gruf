@@ -61,7 +61,11 @@ def parse_args():
     p.add_argument('--filter', '-F')
     p.add_argument('cmd', nargs=argparse.REMAINDER)
 
-    return p.parse_args()
+    args = p.parse_args()
+    if not args.cmd:
+        p.error('you must specify a gerrit command')
+
+    return args
 
 
 def main():
