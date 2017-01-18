@@ -10,6 +10,12 @@ For the latest and greatest:
 
 ## Configuration
 
+Gruf expects a remote called "gerrit" to exist in your git config.  It must be the `ssh://` style in order for Gruf to parse it correctly.  For example:
+
+    [remote "gerrit"]
+        url = ssh://someuser@gerrit.yourcompany.com:29418/repo/path
+        fetch = +refs/heads/*:refs/remotes/gerrit/*
+
 Gruf will attempt to read `$XDG_CONFIG_DIR/gruf/gruf.yml` (which
 normally means `$HOME/.config/gruf/gruf.yml`), which is a [YAML][]
 format file that can contain a `querymap` key that maps terms in your
